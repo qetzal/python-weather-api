@@ -50,14 +50,23 @@ YAHOO_WEATHER_NS     = 'http://xml.weather.yahoo.com/ns/rss/1.0'
 
 NOAA_WEATHER_URL     = 'http://www.weather.gov/xml/current_obs/%s.xml'
 
-WEATHER_COM_URL     = 'http://xoap.weather.com/weather/local/%s?par=1138276742&key=15ee9c789ccd70f5&dayf=5'
+#WEATHER_COM_URL      = 'http://xoap.weather.com/weather/local/%s?par=1138276742&key=15ee9c789ccd70f5&dayf=5'
+WEATHER_COM_URL      = 'http://xml.weather.com/weather/local/%s?par=1138276742&key=15ee9c789ccd70f5&dayf=5'
 
 def get_weather_from_weather_com(location_id, units='M'):
     url = WEATHER_COM_URL % (location_id)
     if units == "M":
         url = url + '&unit=m'
-    handler = urlopen(url)
-    content_type = dict(handler.getheaders())['Content-Type']
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return {}
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
         charset = 'utf-8'
@@ -114,8 +123,16 @@ def get_weather_from_google(location_id, hl = ''):
     """
     location_id, hl = list(map(quote, (location_id, hl)))
     url = GOOGLE_WEATHER_URL % (location_id, hl)
-    handler = urlopen(url)
-    content_type = dict(handler.getheaders())['Content-Type']
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return {}
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
         charset = 'utf-8'
@@ -132,7 +149,7 @@ def get_weather_from_google(location_id, hl = ''):
     data_structure = { 
         'forecast_information': ('city', 'postal_code', 'latitude_e6', 'longitude_e6', 'forecast_date', 'current_date_time', 'unit_system'),
         'current_conditions': ('condition','temp_f', 'temp_c', 'humidity', 'wind_condition', 'icon')
-    }           
+    }
     for (tag, list_of_tags2) in data_structure.items():
         tmp_conditions = {}
         for tag2 in list_of_tags2:
@@ -168,8 +185,16 @@ def get_countries_from_google(hl = ''):
     """
     url = GOOGLE_COUNTRIES_URL % hl
     
-    handler = urlopen(url)
-    content_type = dict(handler.getheaders())['Content-Type']
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return []
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
         charset = 'utf-8'
@@ -207,8 +232,13 @@ def get_cities_from_google(country_code, hl = ''):
     try:
         handler = urlopen(url)
     except URLError:
-        sys.exit(1)
-    content_type = dict(handler.getheaders())['Content-Type']
+        return []
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
         charset = 'utf-8'
@@ -265,7 +295,10 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
     else:
         unit = 'f'
     url = YAHOO_WEATHER_URL % (location_id, unit)
-    handler = urlopen(url)
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return {}
     dom = minidom.parse(handler)    
     handler.close()
         
@@ -344,7 +377,10 @@ def get_weather_from_noaa(station_id):
     """
     station_id = quote(station_id)
     url = NOAA_WEATHER_URL % (station_id)
-    handler = urlopen(url)
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return {}
     dom = minidom.parse(handler)    
     handler.close()
         
