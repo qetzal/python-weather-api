@@ -22,20 +22,30 @@
 #OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Fetches weather reports from Google Weather, Yahoo Wheather and NOAA
+Fetches weather reports from Google Weather, Yahoo Weather and NOAA
 """
 
+try:
+    # Python 3 imports
+    from urllib.request import urlopen
+    from urllib.parse import quote
+    from urllib.error import URLError
+except ImportError:
+    # Python 2 imports
+    from urllib2 import urlopen
+    from urllib import quote
+    from urllib2 import URLError
 import sys
-import urllib.request, urllib.error, urllib.parse
 import re
 from xml.dom import minidom
-from urllib.parse import quote
+import random
 
 GOOGLE_WEATHER_URL   = 'http://www.google.com/ig/api?weather=%s&hl=%s'
 GOOGLE_COUNTRIES_URL = 'http://www.google.com/ig/countries?output=xml&hl=%s'
 GOOGLE_CITIES_URL    = 'http://www.google.com/ig/cities?output=xml&country=%s&hl=%s'
 
-YAHOO_WEATHER_URL    = 'http://xml.weather.yahoo.com/forecastrss?p=%s&u=%s'
+#YAHOO_WEATHER_URL    = 'http://xml.weather.yahoo.com/forecastrss?p=%s&u=%s'
+YAHOO_WEATHER_URL    = 'http://xml.weather.yahoo.com/forecastrss/%s_%s.xml?' + str(random.random() * 100)
 YAHOO_WEATHER_NS     = 'http://xml.weather.yahoo.com/ns/rss/1.0'
 
 NOAA_WEATHER_URL     = 'http://www.weather.gov/xml/current_obs/%s.xml'
@@ -46,7 +56,7 @@ def get_weather_from_weather_com(location_id, units='M'):
     url = WEATHER_COM_URL % (location_id)
     if units == "M":
         url = url + '&unit=m'
-    handler = urllib.request.urlopen(url)
+    handler = urlopen(url)
     content_type = dict(handler.getheaders())['Content-Type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
@@ -104,7 +114,7 @@ def get_weather_from_google(location_id, hl = ''):
     """
     location_id, hl = list(map(quote, (location_id, hl)))
     url = GOOGLE_WEATHER_URL % (location_id, hl)
-    handler = urllib.request.urlopen(url)
+    handler = urlopen(url)
     content_type = dict(handler.getheaders())['Content-Type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
@@ -158,7 +168,7 @@ def get_countries_from_google(hl = ''):
     """
     url = GOOGLE_COUNTRIES_URL % hl
     
-    handler = urllib.request.urlopen(url)
+    handler = urlopen(url)
     content_type = dict(handler.getheaders())['Content-Type']
     charset = re.search('charset\=(.*)',content_type).group(1)
     if not charset:
@@ -195,8 +205,8 @@ def get_cities_from_google(country_code, hl = ''):
     url = GOOGLE_CITIES_URL % (country_code.lower(), hl)
     
     try:
-        handler = urllib.request.urlopen(url)
-    except urllib.error.URLError:
+        handler = urlopen(url)
+    except URLError:
         sys.exit(1)
     content_type = dict(handler.getheaders())['Content-Type']
     charset = re.search('charset\=(.*)',content_type).group(1)
@@ -255,7 +265,7 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
     else:
         unit = 'f'
     url = YAHOO_WEATHER_URL % (location_id, unit)
-    handler = urllib.request.urlopen(url)
+    handler = urlopen(url)
     dom = minidom.parse(handler)    
     handler.close()
         
@@ -284,7 +294,7 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
     
     forecasts = []
     for forecast in dom.getElementsByTagNameNS(YAHOO_WEATHER_NS, 'forecast'):
-        forecasts.append(xml_get_attrs(forecast,('date', 'low', 'high', 'text', 'code')))
+        forecasts.append(xml_get_attrs(forecast,('day', 'date', 'low', 'high', 'text', 'code')))
     weather_data['forecasts'] = forecasts
     
     dom.unlink()
@@ -334,7 +344,7 @@ def get_weather_from_noaa(station_id):
     """
     station_id = quote(station_id)
     url = NOAA_WEATHER_URL % (station_id)
-    handler = urllib.request.urlopen(url)
+    handler = urlopen(url)
     dom = minidom.parse(handler)    
     handler.close()
         
