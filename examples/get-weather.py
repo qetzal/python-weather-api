@@ -27,43 +27,6 @@ from optparse import OptionParser
 from xml.etree.cElementTree import ElementTree, Element
 import pywapi
 
-def write_everything_from_google_to_xml(country, outfile='weather.xml', hl=''):
-    """ Write all the results from google to an xml file """
-    weather_reports = pywapi.get_everything_from_google(country, hl)
-    
-    xml_output = Element('Weather')
-    for city in weather_reports:
-        try:
-            xml_city = Element('town')
-            
-            xml_name = Element('name')
-            xml_name.text = city
-            xml_city.append(xml_name)
-            
-            xml_temperature = Element('temperature')
-            xml_temperature.text = weather_reports[city]['current_conditions']['temp_c']
-            xml_city.append(xml_temperature)
-            
-            xml_humidity = Element('humidity')
-            xml_humidity.text = weather_reports[city]['current_conditions']['humidity']
-            xml_city.append(xml_humidity)
-            
-            xml_condition = Element('condition')
-            xml_condition.text = weather_reports[city]['current_conditions']['condition']
-            xml_city.append(xml_condition)
-            
-            xml_wind = Element('wind')
-            xml_wind.text = weather_reports[city]['current_conditions']['wind_condition']
-            xml_city.append(xml_wind)
-            
-            xml_output.append(xml_city)
-        except KeyError:
-            pass
-        
-        
-    ElementTree(xml_output).write(outfile, 'UTF-8')
-
-
 def write_everything_from_yahoo_to_xml(country, cities, outfile='weather.xml'):
     """ Write all the results from google to an xml file """
     weather_reports = pywapi.get_everything_from_yahoo(country, cities)
@@ -111,19 +74,11 @@ def main():
     parser.add_option("-f", "--file", dest="filename", default="weather.xml",\
         help="write directory contents to FILE (default: weather.xml)",\
         metavar="FILE")
-    parser.add_option("-p", "--provider", dest="provider",\
-        default="yahoo",\
-        help="Choose provider (yahoo|google) (default: yahoo)",\
-        type="str", metavar="PROVIDER")
 
     (options, args) = parser.parse_args()
 
-    if options.provider == 'google':
-        write_everything_from_google_to_xml('gr', outfile=options.filename,\
-            hl='el')
-    else:
-        # Greece (GRXX) has 81 cities available with data
-        write_everything_from_yahoo_to_xml('GRXX', 81, outfile=options.filename)
+    # Greece (GRXX) has 81 cities available with data
+    write_everything_from_yahoo_to_xml('GRXX', 81, outfile=options.filename)
     
 if __name__ == '__main__':
     main()
