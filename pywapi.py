@@ -314,8 +314,12 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
         weather_data[tag] = xml_get_ns_yahoo_tag(dom, YAHOO_WEATHER_NS, tag, attrs)
 
     weather_data['geo'] = {}
-    weather_data['geo']['lat'] = dom.getElementsByTagName('geo:lat')[0].firstChild.data
-    weather_data['geo']['long'] = dom.getElementsByTagName('geo:long')[0].firstChild.data
+    try:
+        weather_data['geo']['lat'] = dom.getElementsByTagName('geo:lat')[0].firstChild.data
+        weather_data['geo']['long'] = dom.getElementsByTagName('geo:long')[0].firstChild.data
+    except AttributeError:
+        weather_data['geo']['lat'] = u''
+        weather_data['geo']['long'] = u''
 
     weather_data['condition']['title'] = dom.getElementsByTagName('item')[0].getElementsByTagName('title')[0].firstChild.data
     weather_data['html_description'] = dom.getElementsByTagName('item')[0].getElementsByTagName('description')[0].firstChild.data
