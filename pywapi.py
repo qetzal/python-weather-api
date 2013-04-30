@@ -49,9 +49,16 @@ YAHOO_WEATHER_NS       = 'http://xml.weather.yahoo.com/ns/rss/1.0'
 NOAA_WEATHER_URL       = 'http://www.weather.gov/xml/current_obs/%s.xml'
 
 WEATHER_COM_URL        = 'http://xml.weather.com/weather/local/%s?par=1138276742&key=15ee9c789ccd70f5&unit=%s&dayf=5&cc=*'
-#WEATHER_COM_SEARCH_URL = 'http://xml.weather.com/search/search?where=%s'
 
-#WUNDERGROUND_URL       = 'http://api.wunderground.com/auto/wui/geo/ForecastXML/index.xml?query=%s'
+LOCID_SEARCH_URL       = 'http://xml.weather.com/search/search?where=%s'
+
+WOEID_SEARCH_URL       = 'http://query.yahooapis.com/v1/public/yql?q=%s'
+WOEID_QUERY_STRING     = 'select woeid from geo.placefinder where text="%s"'
+
+#WXUG_FORECAST_URL      = 'http://api.wunderground.com/auto/wui/geo/ForecastXML/index.xml?query=%s'
+#WXUG_CURRENT_URL       = 'http://api.wunderground.com/auto/wui/geo/WXCurrentObXML/index.xml?query=%s'
+#WXUG_GEOLOOKUP_URL     = 'http://api.wunderground.com/auto/wui/geo/GeoLookupXML/index.xml?query=%s'
+#WXUG_ALERTS_URL        = 'http://api.wunderground.com/auto/wui/geo/AlertsXML/index.xml?query=%s'
 
 def get_weather_from_weather_com(location_id, units = 'metric'):
     """
@@ -107,18 +114,22 @@ def get_weather_from_weather_com(location_id, units = 'metric'):
         dom.unlink()
         return error_data
 
-    key_map = {'head':'units', 'ut':'temperature', 'ud':'distance', 'us':'speed', 'up':'pressure',
-                  'ur':'rainfall', 'loc':'location', 'dnam':'name', 'lat':'lat', 'lon':'lon',
-                  'cc':'current_conditions', 'lsup':'last_updated', 'obst':'station', 'tmp':'temperature',
-                  'flik':'feels_like', 't':'text', 'icon':'icon', 'bar':'barometer', 'r':'reading',
-                  'd':'direction', 'wind':'wind', 's':'speed', 'gust':'gust', 'hmid':'humidity',
-                  'vis':'visibility', 'uv':'uv', 'i':'index', 'dewp':'dewpoint', 'moon':'moon_phase',
-                  'hi':'high', 'low':'low', 'sunr':'sunrise', 'suns':'sunset', 'bt':'brief_text',
-                  'ppcp':'chance_precip'}
-                  
+    key_map = {'head':'units', 'ut':'temperature', 'ud':'distance',
+               'us':'speed', 'up':'pressure', 'ur':'rainfall',
+               'loc':'location', 'dnam':'name', 'lat':'lat', 'lon':'lon',
+               'cc':'current_conditions', 'lsup':'last_updated',
+               'obst':'station', 'tmp':'temperature',
+               'flik':'feels_like', 't':'text', 'icon':'icon',
+               'bar':'barometer', 'r':'reading', 'd':'direction',
+               'wind':'wind', 's':'speed', 'gust':'gust', 'hmid':'humidity',
+               'vis':'visibility', 'uv':'uv', 'i':'index', 'dewp':'dewpoint',
+               'moon':'moon_phase', 'hi':'high', 'low':'low', 'sunr':'sunrise',
+             'suns':'sunset', 'bt':'brief_text', 'ppcp':'chance_precip'}
+
     data_structure = {'head': ('ut', 'ud', 'us', 'up', 'ur'),
                       'loc': ('dnam', 'lat', 'lon'),
-                      'cc': ('lsup', 'obst', 'tmp', 'flik', 't', 'icon', 'hmid', 'vis', 'dewp')}
+                      'cc': ('lsup', 'obst', 'tmp', 'flik', 't',
+                             'icon', 'hmid', 'vis', 'dewp')}
     cc_structure = {'bar': ('r','d'),
                     'wind': ('s','gust','d','t'),
                     'uv': ('i','t'),
@@ -165,7 +176,29 @@ def get_weather_from_weather_com(location_id, units = 'metric'):
     
     dom.unlink()
     return weather_data
-    
+
+
+
+
+def get_weather_from_google(location_id, hl = ''): 		
+    """ 		
+    Fetches weather report from Google. No longer functional,
+    since Google discontinued their Weather API as of Sep 2012.
+    Method retained for backwards compatibility.
+
+    Parameters 		
+    location_id: a zip code (10001); city name, state (weather=woodland,PA); city name, country (weather=london, england); 		
+    latitude/longitude(weather=,,,30670000,104019996) or possibly other. 		
+    hl: the language parameter (language code). Default value is empty string, in this case Google will use English. 		
+
+    Returns:
+    weather_data: a dictionary of weather data that exists in XML feed.
+
+    """
+    weather_data = {'error': 'The Google Weather API has been discontinued as of September 2012.'}
+    return weather_data
+
+
 def get_countries_from_google(hl = ''):
     """
     Get list of countries in specified language from Google
@@ -263,17 +296,13 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
     Fetches weather report from Yahoo! Weather
 
     Parameters:
-      location_id: A five digit US zip code or location ID. To find your location ID,
-      browse or search for your city from the Yahoo! Weather home page (http://weather.yahoo.com/)
-      The weather ID is in the URL for the forecast page for that city. You can also get
-      the location ID by entering your zip code on the home page. For example, if you
-      search for Los Angeles on the Weather home page, the forecast page for that city
-      is http://weather.yahoo.com/forecast/USCA0638.html. The location ID is USCA0638.
+      location_id: A five digit US zip code or location ID. To find your
+      location ID, use function get_location_id()
 
       units: type of units. 'metric' for metric and '' for non-metric
-      Note that choosing metric units changes all the weather units to metric,
-      for example, wind speed will be reported as kilometers per hour and
-      barometric pressure as millibars.
+      Note that choosing metric units changes all the weather units to
+      metric. For example, wind speed will be reported as kilometers per
+      hour and barometric pressure as millibars.
  
     Returns:
       weather_data: a dictionary of weather data that exists in XML feed.
@@ -337,8 +366,9 @@ def get_everything_from_yahoo(country_code, cities):
     Get all weather data from yahoo for a specific country.
 
     Parameters:
-      country_code: A four letter code of the necessary country. For example 'GMXX' or 'FRXX'.
-      cities: The number of cities for which to get data
+      country_code: A four letter code of the necessary country.
+                    For example 'GMXX' or 'FRXX'.
+      cities: The maximum number of cities for which to get data
       
     Returns:
       weather_reports: A dictionary containing weather data for each city
@@ -360,8 +390,9 @@ def yield_all_country_city_codes_yahoo(country_code, cities):
     Yield all cities codes for a specific country.
     
     Parameters:
-      country_code: A four letter code of the necessary country. For example 'GMXX' or 'FRXX'.
-      cities: The number of cities to yield
+      country_code: A four letter code of the necessary country.
+                    For example 'GMXX' or 'FRXX'.
+      cities: The maximum number of cities to yield
       
     Returns:
       country_city_codes: A generator containing the city codes
@@ -548,3 +579,39 @@ def getText(nodelist):
             if node.nodeType == node.TEXT_NODE:
                     rc = rc + node.data
     return rc
+
+
+def get_location_ids(search_string):
+    """
+    Get location IDs for place names matching a specified string.
+    
+    Parameters:
+      search_string: Plaintext string to match to available place names.
+      For example, a search for 'Los Angeles' will return matches for the
+      city of that name in California, Chile, Cuba, Nicaragua, etc as well
+      as 'East Los Angeles, CA', 'Lake Los Angeles, CA', etc.
+      
+    Returns:
+      location_ids: A dictionary containing place names keyed to location ID
+    """
+    url = LOCID_SEARCH_URL % quote(search_string)
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return {'error': 'Could not connect to server'}
+    dom = minidom.parse(handler)    
+    handler.close()
+
+    location_data = {}
+    try:
+        for loc in dom.getElementsByTagName('search')[0].getElementsByTagName('loc'):
+            loc_id = loc.getAttribute('id')  # loc id
+            loc_name = loc.firstChild.data  # place name
+            location_data[loc_id] = loc_name
+    except IndexError:
+        error_data = {'error': 'No matching Location IDs found'}
+        return error_data
+    finally:
+        dom.unlink()
+
+    return location_data
