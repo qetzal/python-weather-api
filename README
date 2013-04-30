@@ -3,7 +3,7 @@ Copy of http://code.google.com/p/python-weather-api/ page.
 
 =Introduction=
 
-The module provides a python wrapper around the Yahoo! Weather, Google Weather and NOAA APIs.
+The module provides a python wrapper around the Yahoo! Weather, Weather.com and NOAA APIs.
 
 Authors: Eugene Kaznacheev <qetzal@gmail.com>
          Joshua Tasker <jtasker@gmail.com>
@@ -59,7 +59,7 @@ Returns:
 
 == Weather.com ==
 
-Use the following function, that fetches weather report from Google
+Use the following function, that fetches weather report from Weather.com
 
 === *pywapi.get_weather_from_weather_com(* _location_id_ *,* _ units = 'metric' _ *)* ===
 
