@@ -30,11 +30,13 @@ try:
     # Python 3 imports
     from urllib.request import urlopen
     from urllib.parse import quote
+    from urllib.parse import urlencode
     from urllib.error import URLError
 except ImportError:
     # Python 2 imports
     from urllib2 import urlopen
     from urllib import quote
+    from urllib import urlencode
     from urllib2 import URLError
 import sys
 import re
@@ -52,8 +54,8 @@ WEATHER_COM_URL        = 'http://xml.weather.com/weather/local/%s?par=1138276742
 
 LOCID_SEARCH_URL       = 'http://xml.weather.com/search/search?where=%s'
 
-WOEID_SEARCH_URL       = 'http://query.yahooapis.com/v1/public/yql?q=%s'
-WOEID_QUERY_STRING     = 'select woeid from geo.placefinder where text="%s"'
+WOEID_SEARCH_URL       = 'http://query.yahooapis.com/v1/public/yql'
+WOEID_QUERY_STRING     = 'select line1, line2, line3, line4, woeid from geo.placefinder where text="%s"'
 
 #WXUG_FORECAST_URL      = 'http://api.wunderground.com/auto/wui/geo/ForecastXML/index.xml?query=%s'
 #WXUG_CURRENT_URL       = 'http://api.wunderground.com/auto/wui/geo/WXCurrentObXML/index.xml?query=%s'
@@ -615,3 +617,54 @@ def get_location_ids(search_string):
         dom.unlink()
 
     return location_data
+    
+
+def get_woeid_from_yahoo(search_string):    
+    """
+    Get Yahoo WOEID for the place name that best matches the specified string.
+    
+    Parameters:
+      search_string: Plaintext string to match to available place names.
+      Place can be a city, country, province, airport code, etc. Yahoo returns
+      the WOEID for the place name(s) that is the best match to the full string.
+      For example, 'Paris' will match 'Paris, France', 'Deutschland' will match
+      'Germany', 'Ontario' will match 'Ontario, Canada', 'SFO' will match 'San
+      Francisco International Airport', etc.
+      
+    Returns:
+      woeid_data: A dictionary containing place names keyed to WOEID
+    """
+    ## This uses Yahoo's YQL tables to directly query Yahoo's database, e.g.                        
+    ## http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20geo.placefinder%20where%20text%3D%22New%20York%22
+    params = {'q': WOEID_QUERY_STRING % search_string, 'format': 'json'}
+    url = '?'.join((WOEID_SEARCH_URL, urlencode(params)))
+    try:
+        handler = urlopen(url)
+    except URLError:
+        return {'error': 'Could not connect to server'}
+    json_response = handler.read()
+    handler.close()
+    null = None
+    yahoo_woeid_result = eval(json_response)
+
+    try:
+        result = yahoo_woeid_result['query']['results']['Result']
+    except KeyError:
+        # On error, returned JSON evals to dictionary with one key, 'error'
+        return yahoo_woeid_result
+    except TypeError:
+        return {'error': 'No matching place names found'}
+
+    woeid_data = {}
+    for i in xrange(yahoo_woeid_result['query']['count']):
+        try:
+            place_data = result[i]
+        except KeyError:
+            place_data = result
+        name_lines = [place_data[tag]
+                     for tag in ['line1','line2','line3','line4']
+                     if place_data[tag] is not None]
+        place_name = ', '.join(name_lines)
+        woeid_data[place_data['woeid']] = place_name
+        
+    return woeid_data
