@@ -27,7 +27,7 @@
 from distutils.core import setup
 
 __author__ = 'qetzal@gmail.com, jtasker@gmail.com'
-__version__ = '0.3'
+__version__ = '0.3.1'
 
 
 setup(name='pywapi',
