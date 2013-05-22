@@ -86,16 +86,8 @@ def get_weather_from_weather_com(location_id, units = 'metric'):
 
     Parameters:
       location_id: A five digit US zip code or location ID. To find your
-      location ID, browse or search for your city from the Weather.com home
-      page ( http://www.weather.com/ )
+      location ID, use function get_loc_id_from_weather_com().
       
-      The location ID is in the URL for the forecast page for that city. You
-      can also get the location ID by entering your zip code on the home page.
-      For example, if you search for Los Angeles on Weather.com, the forecast
-      page for that city is:
-      http://www.weather.com/weather/today/Los+Angeles+CA+USCA0638:1:US
-      The location ID is 'USCA0638'.
-
       units: type of units. 'metric' for metric and 'imperial' for non-metric.
       Note that choosing metric units changes all the weather units to metric.
       For example, wind speed will be reported as kilometers per hour and
@@ -747,6 +739,7 @@ def getText(nodelist):
 
 def get_location_ids(search_string):
     """Get location IDs for place names matching a specified string.
+    Same as get_loc_id_from_weather_com() but different return format.
     
     Parameters:
       search_string: Plaintext string to match to available place names.
@@ -758,6 +751,30 @@ def get_location_ids(search_string):
       location_ids: A dictionary containing place names keyed to location ID
 
     """
+    locid_data = get_loc_id_from_weather_com(search_string)
+    if locid_data.has_key('error'):
+        return locid_data
+    
+    location_ids = {}
+    for i in xrange(locid_data['count']):
+        location_ids[locid_data[i][0]] = locid_data[i][1]
+    return location_ids
+
+def get_loc_id_from_weather_com(search_string):
+    """Get location IDs for place names matching a specified string.
+    Same as get_location_ids() but different return format.
+    
+    Parameters:
+      search_string: Plaintext string to match to available place names.
+      For example, a search for 'Los Angeles' will return matches for the
+      city of that name in California, Chile, Cuba, Nicaragua, etc as well
+      as 'East Los Angeles, CA', 'Lake Los Angeles, CA', etc.
+      
+    Returns:
+      locid_data: A dictionary of tuples in the following format:
+      {'count': 2, 0: (LOCID1, Placename1), 1: (LOCID2, Placename2)}
+
+    """
     url = LOCID_SEARCH_URL % quote(search_string)
     try:
         handler = urlopen(url)
@@ -766,22 +783,52 @@ def get_location_ids(search_string):
     dom = minidom.parse(handler)    
     handler.close()
 
-    location_data = {}
+    locid_data = {}
     try:
+        num_locs = 0
         for loc in dom.getElementsByTagName('search')[0].getElementsByTagName('loc'):
             loc_id = loc.getAttribute('id')  # loc id
             loc_name = loc.firstChild.data  # place name
-            location_data[loc_id] = loc_name
+            locid_data[num_locs] = (loc_id, loc_name)
+            num_locs += 1
+        locid_data['count'] = num_locs
     except IndexError:
         error_data = {'error': 'No matching Location IDs found'}
         return error_data
     finally:
         dom.unlink()
 
-    return location_data
+    return locid_data
+
+def get_where_on_earth_ids(search_string):    
+    """Get Yahoo 'Where On Earth' ID for the place names that best match the
+    specified string. Same as get_woe_id_from_yahoo() but different return format.
+    
+    Parameters:
+      search_string: Plaintext string to match to available place names.
+      Place can be a city, country, province, airport code, etc. Yahoo returns
+      the 'Where On Earth' ID (WOEID) for the place name(s) that is the best
+      match to the full string.
+      For example, 'Paris' will match 'Paris, France', 'Deutschland' will match
+      'Germany', 'Ontario' will match 'Ontario, Canada', 'SFO' will match 'San
+      Francisco International Airport', etc.
+      
+    Returns:
+      where_on_earth_ids: A dictionary containing place names keyed to WOEID.
+
+    """
+    woeid_data = get_woeid_from_yahoo(search_string)
+    if woeid_data.has_key('error'):
+        return woeid_data
+    
+    where_on_earth_ids = {}
+    for i in xrange(woeid_data['count']):
+        where_on_earth_ids[woeid_data[i][0]] = woeid_data[i][1]
+    return where_on_earth_ids
 
 def get_woeid_from_yahoo(search_string):    
-    """Get Yahoo WOEID for the place name that best matches the specified string.
+    """Get Yahoo WOEID for the place names that best match the specified string.
+    Same as get_where_on_earth_ids() but different return format.
     
     Parameters:
       search_string: Plaintext string to match to available place names.
@@ -831,7 +878,6 @@ def get_woeid_from_yahoo(search_string):
         woeid_data[i] = (place_data['woeid'], place_name)
         
     return woeid_data
-    
     
 def heat_index(temperature, humidity, units = 'metric'):
     """Calculate Heat Index for the specified temperature and humidity
