@@ -34,6 +34,9 @@ try:
     from urllib.parse import quote
     from urllib.parse import urlencode
     from urllib.error import URLError
+    # needed for code to work on Python3
+    xrange = range
+    unicode = str
 except ImportError:
     # Python 2 imports
     from urllib2 import urlopen
@@ -44,6 +47,11 @@ import sys
 import re
 from math import pow
 from xml.dom import minidom
+
+try:
+    from unidecode import unidecode
+except ImportError:
+    pass
 
 GOOGLE_COUNTRIES_URL = 'http://www.google.com/ig/countries?output=xml&hl=%s'
 GOOGLE_CITIES_URL    = 'http://www.google.com/ig/cities?output=xml&' + \
@@ -367,8 +375,8 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
         weather_data['geo']['lat'] = dom.getElementsByTagName('geo:lat')[0].firstChild.data
         weather_data['geo']['long'] = dom.getElementsByTagName('geo:long')[0].firstChild.data
     except AttributeError:
-        weather_data['geo']['lat'] = u''
-        weather_data['geo']['long'] = u''
+        weather_data['geo']['lat'] = unicode()
+        weather_data['geo']['long'] = unicode()
 
     weather_data['condition']['title'] = dom.getElementsByTagName('item')[0].getElementsByTagName('title')[0].firstChild.data
     weather_data['html_description'] = dom.getElementsByTagName('item')[0].getElementsByTagName('description')[0].firstChild.data
@@ -752,7 +760,7 @@ def get_location_ids(search_string):
 
     """
     locid_data = get_loc_id_from_weather_com(search_string)
-    if locid_data.has_key('error'):
+    if 'error' in locid_data:
         return locid_data
     
     location_ids = {}
@@ -775,6 +783,12 @@ def get_loc_id_from_weather_com(search_string):
       {'count': 2, 0: (LOCID1, Placename1), 1: (LOCID2, Placename2)}
 
     """
+    # Weather.com stores place names as ascii-only, so convert if possible
+    try:
+        search_string = unidecode(search_string.decode('utf-8'))
+    except NameError:
+        pass
+    
     url = LOCID_SEARCH_URL % quote(search_string)
     try:
         handler = urlopen(url)
@@ -818,7 +832,7 @@ def get_where_on_earth_ids(search_string):
 
     """
     woeid_data = get_woeid_from_yahoo(search_string)
-    if woeid_data.has_key('error'):
+    if 'error' in woeid_data:
         return woeid_data
     
     where_on_earth_ids = {}
