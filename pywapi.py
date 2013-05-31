@@ -28,6 +28,8 @@
 
 """ Fetches weather reports from Yahoo! Weather, Weather.com and NOAA """
 
+__version__ = "0.3.3"
+
 try:
     # Python 3 imports
     from urllib.request import urlopen
@@ -47,6 +49,7 @@ import sys
 import re
 from math import pow
 from xml.dom import minidom
+import json
 
 try:
     from unidecode import unidecode
@@ -344,7 +347,20 @@ def get_weather_from_yahoo(location_id, units = 'metric'):
         handler = urlopen(url)
     except URLError:
         return {'error': 'Could not connect to Yahoo! Weather'}
-    dom = minidom.parse(handler)    
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
+    charset = re.search('charset\=(.*)',content_type).group(1)
+    if not charset:
+        charset = 'utf-8'
+    if charset.lower() != 'utf-8':
+        xml_response = handler.read().decode(charset).encode('utf-8')
+    else:
+        xml_response = handler.read()
+    dom = minidom.parseString(xml_response)
     handler.close()
         
     weather_data = {}
@@ -458,7 +474,20 @@ def get_weather_from_noaa(station_id):
         handler = urlopen(url)
     except URLError:
         return {'error': 'Could not connect to NOAA'}
-    dom = minidom.parse(handler)    
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
+    charset = re.search('charset\=(.*)',content_type).group(1)
+    if not charset:
+        charset = 'utf-8'
+    if charset.lower() != 'utf-8':
+        xml_response = handler.read().decode(charset).encode('utf-8')
+    else:
+        xml_response = handler.read()
+    dom = minidom.parseString(xml_response)
     handler.close()
         
     data_structure = ('suggested_pickup',
@@ -714,29 +743,8 @@ def wind_beaufort_scale(value, wind_units = WindUnits.KPH):
             return '12'
 
 def get_wind_direction(degrees):
-    """ Convert wind direction from degrees to localized direction """
-    try:
-        degrees = int(degrees)
-    except ValueError:
-        return ''
-
-    if degrees < 23 or degrees >= 338:
-        #Short wind direction - north
-        return 'N'
-    elif degrees < 68:
-        return 'NE'
-    elif degrees < 113:
-        return 'E'
-    elif degrees < 158:
-        return 'SE'
-    elif degrees < 203:
-        return 'S'
-    elif degrees < 248:
-        return 'SW'
-    elif degrees < 293:
-        return 'W'
-    elif degrees < 338:
-        return 'NW'
+    """ Same as wind_direction """
+    return wind_direction(degrees)
 
 def getText(nodelist):
     rc = ""
@@ -759,13 +767,13 @@ def get_location_ids(search_string):
       location_ids: A dictionary containing place names keyed to location ID
 
     """
-    locid_data = get_loc_id_from_weather_com(search_string)
-    if 'error' in locid_data:
-        return locid_data
+    loc_id_data = get_loc_id_from_weather_com(search_string)
+    if 'error' in loc_id_data:
+        return loc_id_data
     
     location_ids = {}
-    for i in xrange(locid_data['count']):
-        location_ids[locid_data[i][0]] = locid_data[i][1]
+    for i in xrange(loc_id_data['count']):
+        location_ids[loc_id_data[i][0]] = loc_id_data[i][1]
     return location_ids
 
 def get_loc_id_from_weather_com(search_string):
@@ -779,13 +787,14 @@ def get_loc_id_from_weather_com(search_string):
       as 'East Los Angeles, CA', 'Lake Los Angeles, CA', etc.
       
     Returns:
-      locid_data: A dictionary of tuples in the following format:
+      loc_id_data: A dictionary of tuples in the following format:
       {'count': 2, 0: (LOCID1, Placename1), 1: (LOCID2, Placename2)}
 
     """
     # Weather.com stores place names as ascii-only, so convert if possible
     try:
-        search_string = unidecode(search_string.decode('utf-8'))
+        # search_string = unidecode(search_string.encode('utf-8'))
+        search_string = unidecode(search_string)
     except NameError:
         pass
     
@@ -794,25 +803,38 @@ def get_loc_id_from_weather_com(search_string):
         handler = urlopen(url)
     except URLError:
         return {'error': 'Could not connect to server'}
-    dom = minidom.parse(handler)    
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
+    charset = re.search('charset\=(.*)',content_type).group(1)
+    if not charset:
+        charset = 'utf-8'
+    if charset.lower() != 'utf-8':
+        xml_response = handler.read().decode(charset).encode('utf-8')
+    else:
+        xml_response = handler.read()
+    dom = minidom.parseString(xml_response)
     handler.close()
 
-    locid_data = {}
+    loc_id_data = {}
     try:
         num_locs = 0
         for loc in dom.getElementsByTagName('search')[0].getElementsByTagName('loc'):
             loc_id = loc.getAttribute('id')  # loc id
-            loc_name = loc.firstChild.data  # place name
-            locid_data[num_locs] = (loc_id, loc_name)
+            place_name = loc.firstChild.data  # place name
+            loc_id_data[num_locs] = (loc_id, place_name)
             num_locs += 1
-        locid_data['count'] = num_locs
+        loc_id_data['count'] = num_locs
     except IndexError:
         error_data = {'error': 'No matching Location IDs found'}
         return error_data
     finally:
         dom.unlink()
 
-    return locid_data
+    return loc_id_data
 
 def get_where_on_earth_ids(search_string):    
     """Get Yahoo 'Where On Earth' ID for the place names that best match the
@@ -859,16 +881,28 @@ def get_woeid_from_yahoo(search_string):
     """
     ## This uses Yahoo's YQL tables to directly query Yahoo's database, e.g.                        
     ## http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20geo.placefinder%20where%20text%3D%22New%20York%22
-    params = {'q': WOEID_QUERY_STRING % search_string, 'format': 'json'}
+    # TODO: should we verify search_string is Unicode here?
+    params = {'q': WOEID_QUERY_STRING % search_string.encode('utf-8'), 'format': 'json'}
     url = '?'.join((WOEID_SEARCH_URL, urlencode(params)))
     try:
         handler = urlopen(url)
     except URLError:
         return {'error': 'Could not connect to server'}
-    json_response = handler.read()
+    if sys.version > '3':
+        # Python 3
+        content_type = dict(handler.getheaders())['Content-Type']
+    else:
+        # Python 2
+        content_type = handler.info().dict['content-type']
+    charset = re.search('charset\=(.*)',content_type).group(1)
+    if not charset:
+        charset = 'utf-8'
+    if charset.lower() != 'utf-8':
+        json_response = handler.read().decode(charset).encode('utf-8')
+    else:
+        json_response = handler.read()
     handler.close()
-    null = None
-    yahoo_woeid_result = eval(json_response)
+    yahoo_woeid_result = json.loads(json_response)
 
     try:
         result = yahoo_woeid_result['query']['results']['Result']
@@ -890,7 +924,7 @@ def get_woeid_from_yahoo(search_string):
                      if place_data[tag] is not None]
         place_name = ', '.join(name_lines)
         woeid_data[i] = (place_data['woeid'], place_name)
-        
+
     return woeid_data
     
 def heat_index(temperature, humidity, units = 'metric'):
