@@ -1,3 +1,10 @@
+v0.3.3 (1 June 2013)
++ Added suggested dependency on unidecode module to get location IDs for place names containing non-ascii characters
++ Added __version__ string to module for version tracking
+! Now uses json module to parse json replies instead of unsafe eval()
+! Unicode strings are now correctly handled by all methods
+! Fixes for Py3k compatibility
+
 v0.3.2 (21 May 2013)
 + Added function get_loc_id_from_weather_com(), which is same as
   get_location_ids(), but with return format like get_woe_id_from_yahoo().
