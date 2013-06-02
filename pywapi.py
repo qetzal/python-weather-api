@@ -881,8 +881,11 @@ def get_woeid_from_yahoo(search_string):
     """
     ## This uses Yahoo's YQL tables to directly query Yahoo's database, e.g.                        
     ## http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20geo.placefinder%20where%20text%3D%22New%20York%22
-    # TODO: should we verify search_string is Unicode here?
-    params = {'q': WOEID_QUERY_STRING % search_string.encode('utf-8'), 'format': 'json'}
+    if sys.version > '3':
+        encoded_string = search_string
+    else:
+        encoded_string = search_string.encode('utf-8')
+    params = {'q': WOEID_QUERY_STRING % encoded_string, 'format': 'json'}
     url = '?'.join((WOEID_SEARCH_URL, urlencode(params)))
     try:
         handler = urlopen(url)
@@ -900,7 +903,7 @@ def get_woeid_from_yahoo(search_string):
     if charset.lower() != 'utf-8':
         json_response = handler.read().decode(charset).encode('utf-8')
     else:
-        json_response = handler.read()
+        json_response = handler.read().decode()
     handler.close()
     yahoo_woeid_result = json.loads(json_response)
 
