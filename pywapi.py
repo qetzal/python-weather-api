@@ -935,7 +935,7 @@ def get_woeid_from_yahoo(search_string):
     if charset.lower() != 'utf-8':
         json_response = handler.read().decode(charset).encode('utf-8')
     else:
-        json_response = handler.read().decode()
+        json_response = handler.read()
     handler.close()
     yahoo_woeid_result = json.loads(json_response)
 
