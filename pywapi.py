@@ -867,7 +867,7 @@ def get_loc_id_from_weather_com(search_string):
 
 def get_where_on_earth_ids(search_string):    
     """Get Yahoo 'Where On Earth' ID for the place names that best match the
-    specified string. Same as get_woe_id_from_yahoo() but different return format.
+    specified string. Same as get_woeid_from_yahoo() but different return format.
     
     Parameters:
       search_string: Plaintext string to match to available place names.
