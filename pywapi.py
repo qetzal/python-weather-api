@@ -28,7 +28,7 @@
 
 """ Fetches weather reports from Yahoo! Weather, Weather.com and NOAA """
 
-__version__ = "0.3.7"
+__version__ = "0.3.8"
 
 try:
     # Python 3 imports
@@ -182,8 +182,12 @@ def get_weather_from_weather_com(location_id, units = 'metric'):
             weather_data[key] = {}
             for tag2 in list_of_tags2:
                 key2 = key_map[tag2]
-                weather_data[key][key2] = weather_dom.getElementsByTagName(
-                    tag)[0].getElementsByTagName(tag2)[0].firstChild.data
+                try:
+                    weather_data[key][key2] = weather_dom.getElementsByTagName(
+                        tag)[0].getElementsByTagName(tag2)[0].firstChild.data
+                except AttributeError:
+                    # current tag has empty value
+                    weather_data[key][key2] = unicode('')
     except IndexError:
         error_data = {'error': 'Error parsing Weather.com response. Full response: %s' % xml_response}
         return error_data
@@ -195,8 +199,12 @@ def get_weather_from_weather_com(location_id, units = 'metric'):
             weather_data['current_conditions'][key] = {}
             for tag2 in list_of_tags2:
                 key2 = key_map[tag2]
-                weather_data['current_conditions'][key][key2] = cc_dom.getElementsByTagName(
-                    tag)[0].getElementsByTagName(tag2)[0].firstChild.data
+                try:
+                    weather_data['current_conditions'][key][key2] = cc_dom.getElementsByTagName(
+                        tag)[0].getElementsByTagName(tag2)[0].firstChild.data
+                except AttributeError:
+                    # current tag has empty value
+                    weather_data['current_conditions'][key][key2] = unicode('')
     
     forecasts = []
     if len(weather_dom.getElementsByTagName('dayf')) > 0:
